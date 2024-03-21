@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  server:
+    container_name: api-server
+    image: golang:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - app:/app
+
+  db:
+    container_name: api-db
+    image: postgres:latest
+    env_file:
+      - .env.db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+  app:
