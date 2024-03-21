@@ -24,10 +24,6 @@ func main() {
 
 	apiRoutes.GET("/ping", handlers.Ping)
 
-	// Setup auth routes
-	authRoutes := apiRoutes.Group("/auth")
-	handlers.SetupAuthRoutes(authRoutes)
-
 	// Setup user routes
 	userRoutes := apiRoutes.Group("/users")
 	userRoutes.Use(middleware.EnsureValidToken())

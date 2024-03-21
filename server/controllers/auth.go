@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"api/utils"
+	"api/types"
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Handler(auth *utils.Authenticator) gin.HandlerFunc {
+func Handler(auth *types.Authenticator) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		state, err := generateRandomState()
 		if err != nil {
