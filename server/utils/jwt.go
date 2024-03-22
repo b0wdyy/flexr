@@ -1,9 +1,21 @@
 package utils
 
-import "github.com/gin-gonic/gin"
+import (
+	"fmt"
+	"strings"
 
-func ExtractJWT(c *gin.Context) string {
+	"github.com/gin-gonic/gin"
+)
+
+func ExtractJWT(c *gin.Context) (string, error) {
+	// Extract the JWT from the Authorization header
 	jwt := c.GetHeader("Authorization")
 
-	return jwt
+	if jwt == "" {
+		return "", fmt.Errorf("NO JWT PROVIDED")
+	}
+
+	token := strings.Split(jwt, " ")[1]
+
+	return token, nil
 }

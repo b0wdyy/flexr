@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	adapter "github.com/gwatts/gin-adapter"
 	"github.com/joho/godotenv"
 )
 
@@ -24,10 +25,17 @@ func main() {
 
 	apiRoutes.GET("/ping", handlers.Ping)
 
+	// Middleware
+	jwtMiddleware := middleware.TestValidToken()
+
 	// Setup user routes
 	userRoutes := apiRoutes.Group("/users")
-	userRoutes.Use(middleware.EnsureValidToken())
+	userRoutes.Use(adapter.Wrap(jwtMiddleware.CheckJWT))
 	handlers.SetupUserRoutes(userRoutes)
+
+	// Setup post routes
+	postRoutes := apiRoutes.Group("/posts")
+	handlers.SetupPostRoutes(postRoutes)
 
 	router.Run(":" + os.Getenv("PORT"))
 }
