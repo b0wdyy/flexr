@@ -1,8 +1,5 @@
 FROM golang:latest
 
-# Environment variables
-ENV PORT=3333
-
 # Set the Current Working Directory inside the container
 WORKDIR /app
 

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"api/utils"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,79 +9,63 @@ import (
 	"os"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/gin-gonic/gin"
 )
 
-func TestValidToken() *jwtmiddleware.JWTMiddleware {
-	issuerURL, err := url.Parse(os.Getenv("AUTH0_ISSUER"))
-	audience := os.Getenv("AUTH0_AUDIENCE")
-
-	fmt.Println(issuerURL)
-	fmt.Println(audience)
-
-	if err != nil {
-		log.Fatalf("Failed to parse the issuer url: %v", err)
-	}
-
-	provider := jwks.NewCachingProvider(issuerURL, time.Duration(5*time.Minute))
-
-	jwtValidator, _ := validator.New(provider.KeyFunc,
-		validator.RS256,
-		issuerURL.String(),
-		[]string{audience},
-	)
-
-	jwtMiddleware := jwtmiddleware.New(jwtValidator.ValidateToken)
-
-	return jwtMiddleware
+type CustomClaims struct {
+	Scope string `json:"scope"`
 }
 
-// EnsureValidToken is a middleware that will check the validity of our JWT.
-func EnsureValidToken() gin.HandlerFunc {
+func (c CustomClaims) Validate(ctx context.Context) error {
+	return nil
+}
+
+// GinJWTMiddleware adapts the JWT middleware to be used with Gin.
+func GinJWTMiddleware() gin.HandlerFunc {
+	issuerURL, err := url.Parse("https://" + os.Getenv("AUTH0_DOMAIN") + "/")
+
+	if err != nil {
+		log.Fatalf("Failed to parse the issuer URL: %v", err)
+	}
+
+	provider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
+	fmt.Println(os.Getenv("AUTH0_DOMAIN"))
+	fmt.Println(os.Getenv("AUTH0_AUDIENCE"))
+
+	jwtValidator, err := validator.New(
+		provider.KeyFunc,
+		validator.RS256,
+		issuerURL.String(),
+		[]string{os.Getenv("AUTH0_AUDIENCE")},
+		validator.WithCustomClaims(func() validator.CustomClaims {
+			return &CustomClaims{}
+		}),
+		validator.WithAllowedClockSkew(time.Minute),
+	)
+	if err != nil {
+		log.Fatalf("Failed to set up the JWT validator: %v", err)
+	}
+
 	return func(c *gin.Context) {
-		issuerURL, err := url.Parse("https://" + os.Getenv("AUTH0_DOMAIN") + "/")
+		// Extract token from the Authorization header
+		authHeader := c.GetHeader("Authorization")
 
-		if err != nil {
-			log.Fatalf("Failed to parse the issuer url: %v", err)
-		}
-
-		provider := jwks.NewCachingProvider(issuerURL, 86400)
-
-		jwtValidator, err := validator.New(
-			provider.KeyFunc,
-			validator.RS256,
-			issuerURL.String(),
-			[]string{os.Getenv("AUTH0_AUDIENCE")},
-			validator.WithAllowedClockSkew(time.Minute),
-		)
-		if err != nil {
-			log.Fatalf("Failed to set up the jwt validator")
-		}
-
-		jwt, err := utils.ExtractJWT(c)
-
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "No JWT provided"})
-			c.Abort()
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Authorization header is required"})
 			return
 		}
 
-		fmt.Print(jwt)
-		// Validate the JWT
-		token, err := jwtValidator.ValidateToken(c, jwt)
+		tokenString := authHeader[len("Bearer "):] // Remove "Bearer " prefix
+		_, err := jwtValidator.ValidateToken(context.Background(), tokenString)
 
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid JWT"})
-			c.Abort()
+			log.Printf("Encountered error while validating JWT: %v", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Failed to validate JWT"})
 			return
 		}
-
-		fmt.Println(token)
 
 		c.Next()
 	}
-
 }
