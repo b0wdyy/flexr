@@ -1,8 +1,8 @@
 package main
 
 import (
-	"api/handlers"
-	"api/middleware"
+	"api/internal/handlers"
+	"api/internal/middleware"
 	"log"
 	"os"
 
