@@ -1,0 +1,28 @@
+databaseType = "PostgreSql"
+id = "b76b47f3-2b7b-4746-af37-966442b82b7f"
+name = "flexr"
+
+[flyway]
+locations = [ "filesystem:migrations" ]
+mixed = true
+outOfOrder = true
+validateMigrationNaming = true
+
+  [flyway.check]
+  majorTolerance = 0
+
+[flywayDesktop]
+developmentEnvironment = "development"
+schemaModel = "schema-model"
+shadowEnvironment = "shadow"
+
+[redgateCompare]
+filterFile = "filter.rgf"
+
+[redgateCompare.postgresql.options.ignores]
+ignoreNewlinesInTextObjects = "off"
+
+[environments.target1]
+url = "jdbc:postgresql://ep-patient-mouse-a2g302f0.eu-central-1.aws.neon.tech/flexr"
+schemas = [ "HR" ]
+displayName = "Flexr"
